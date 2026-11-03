@@ -1,0 +1,62 @@
+---
+- name: Setup Nginx Web Server with Bash and Ansible
+  hosts: web
+  become: true
+  vars:
+    nginx_port: 8080
+
+  tasks:
+    # 1. Установка Nginx
+    - name: Ensure Nginx is installed
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: yes
+
+    # 2. Копирование Bash-скрипта на целевой хост
+    - name: Copy site generation script
+      ansible.builtin.copy:
+        src: ../scripts/generate_site.sh
+        dest: /tmp/generate_site.sh
+        mode: '0755'
+
+    # 3. Запуск скрипта (передача имени сайта и версии)
+    - name: Execute site generation script
+      ansible.builtin.script:
+        cmd: /tmp/generate_site.sh "MyLabSite" "2.0.0"
+      # Обратите внимание: модуль script автоматически передает локальный скрипт и выполняет его, 
+      # но при использовании cmd параметры передаются напрямую в скрипт.
+
+    # 4. Проверка сгенерированного HTML-файла
+    - name: Verify index.html exists
+      ansible.builtin.stat:
+        path: /var/www/html/index.html
+      register: html_file
+
+    - name: Show file content for debug
+      ansible.builtin.debug:
+        msg: "File exists: {{ html_file.stat.exists }}, Size: {{ html_file.stat.size | default(0) }} bytes"
+
+    # 5. Развертывание конфигурации Nginx через шаблон Jinja2
+    - name: Deploy Nginx site config
+      ansible.builtin.template:
+        src: ../templates/nginx.conf.j2
+        dest: /etc/nginx/sites-available.d/default.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reload Nginx
+
+    # 6. Активация конфигурации (создание символической ссылки)
+    - name: Enable Nginx site config
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available.d/default.conf
+        dest: /etc/nginx/sites-enabled.d/default.conf
+        state: link
+      notify: Reload Nginx
+
+  handlers:
+    - name: Reload Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
