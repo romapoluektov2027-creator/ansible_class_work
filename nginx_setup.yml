@@ -24,8 +24,7 @@
     - name: Execute site generation script
       ansible.builtin.script:
         cmd: /tmp/generate_site.sh "MyLabSite" "2.0.0"
-      # Обратите внимание: модуль script автоматически передает локальный скрипт и выполняет его, 
-      # но при использовании cmd параметры передаются напрямую в скрипт.
+      changed_when: false  # <--- ДОБАВЛЕНА ЭТА СТРОКА
 
     # 4. Проверка сгенерированного HTML-файла
     - name: Verify index.html exists
