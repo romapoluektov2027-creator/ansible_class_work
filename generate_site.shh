@@ -1,0 +1,33 @@
+#!/bin/bash
+
+set -euo pipefail
+
+# Получение параметров, значений по умолчанию
+SITE_NAME="${1:-mysite}"
+SITE_VERSION="${2:-1.0.0}"
+OUTPUT="/var/www/html/index.html"
+
+# Убедитесь, что каталог существует
+mkdir -p "$(dirname "$OUTPUT")"
+
+# --- ПРОВЕРКА ИДЕМПОТЕНТНОСТИ ---
+# Если файл существует и содержит нужную версию сайта, выходим без изменений
+if [ -f "$OUTPUT" ] && grep -q "Site: $SITE_NAME, Version: $SITE_VERSION" "$OUTPUT"; then
+    echo "Site $SITE_NAME version $SITE_VERSION already exists. Skipping generation."
+    exit 0
+fi
+# --------------------------------
+
+# Генерация HTML
+cat > "$OUTPUT" <<EOF
+<!DOCTYPE html>
+<html>
+<head><title>$SITE_NAME</title></head>
+<body>
+    <h1>Site: $SITE_NAME, Version: $SITE_VERSION</h1>
+    <p>Generated on: $(date -u '+%Y-%m-%d %H:%M:%S UTC')</p>
+</body>
+</html>
+EOF
+
+echo "Site generated successfully at $OUTPUT"
